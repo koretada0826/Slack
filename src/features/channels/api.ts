@@ -15,17 +15,79 @@ export async function fetchChannels(
 
   if (error) throw error
 
-  // Fetch memberships to determine which channels user is a member of
-  const { data: memberships } = await supabase
-    .from('channel_members')
-    .select('channel_id')
-    .eq('user_id', userId)
+  // Fetch memberships and read states in parallel
+  const [membershipsResult, readStatesResult] = await Promise.all([
+    supabase
+      .from('channel_members')
+      .select('channel_id')
+      .eq('user_id', userId),
+    supabase
+      .from('read_states')
+      .select('channel_id, last_read_message_id')
+      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
+      .not('channel_id', 'is', null),
+  ])
 
-  const memberSet = new Set(memberships?.map((m) => m.channel_id) ?? [])
+  const memberSet = new Set(membershipsResult.data?.map((m) => m.channel_id) ?? [])
+
+  // Build read state map: channel_id -> last_read_message_id
+  const readStateMap = new Map<string, string>()
+  for (const rs of readStatesResult.data ?? []) {
+    if (rs.channel_id && rs.last_read_message_id) {
+      readStateMap.set(rs.channel_id, rs.last_read_message_id)
+    }
+  }
+
+  // For member channels, compute unread counts
+  const memberChannelIds = (channels ?? [])
+    .filter((ch: DbChannel) => memberSet.has(ch.id))
+    .map((ch: DbChannel) => ch.id)
+
+  let unreadMap = new Map<string, number>()
+  if (memberChannelIds.length > 0) {
+    // Get last read message timestamps
+    const lastReadMsgIds = Array.from(readStateMap.values())
+    let lastReadTimestamps = new Map<string, string>()
+
+    if (lastReadMsgIds.length > 0) {
+      const { data: lastReadMsgs } = await supabase
+        .from('messages')
+        .select('id, created_at')
+        .in('id', lastReadMsgIds)
+
+      for (const msg of lastReadMsgs ?? []) {
+        lastReadTimestamps.set(msg.id, msg.created_at)
+      }
+    }
+
+    // Count unread for each channel
+    for (const chId of memberChannelIds) {
+      const lastReadMsgId = readStateMap.get(chId)
+      const lastReadAt = lastReadMsgId ? lastReadTimestamps.get(lastReadMsgId) : null
+
+      let query = supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('channel_id', chId)
+        .is('parent_message_id', null)
+        .is('deleted_at', null)
+
+      if (lastReadAt) {
+        query = query.gt('created_at', lastReadAt)
+      }
+
+      const { count } = await query
+      if (count && count > 0) {
+        unreadMap.set(chId, count)
+      }
+    }
+  }
 
   return (channels ?? []).map((ch: DbChannel) => ({
     ...ch,
     is_member: memberSet.has(ch.id),
+    unread_count: unreadMap.get(ch.id) ?? 0,
   }))
 }
 

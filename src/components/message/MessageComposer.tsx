@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Input } from 'antd'
+import { Input, Popover } from 'antd'
 import {
   PlusOutlined, SendOutlined, CaretDownOutlined,
   BoldOutlined, ItalicOutlined, UnderlineOutlined, StrikethroughOutlined,
@@ -19,9 +19,18 @@ interface MessageComposerProps {
   disabled?: boolean
 }
 
-const ToolbarButton = ({ icon, title }: { icon: React.ReactNode; title: string }) => (
+const EMOJI_CATEGORIES = [
+  { label: 'よく使う', emojis: ['👍', '❤️', '😂', '🎉', '🤔', '👀', '🙏', '🔥', '✅', '💯'] },
+  { label: '顔', emojis: ['😀', '😃', '😄', '😁', '😆', '🥹', '😅', '🤣', '🥲', '😊', '😇', '🙂', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚'] },
+  { label: 'ジェスチャー', emojis: ['👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '👏', '🙌', '🤝', '👊', '✊', '🤛', '🤜', '💪', '🙏', '👋', '🤚', '✋', '🖖'] },
+  { label: 'ハート', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '💕', '💞', '💓', '💗', '💖', '💘', '💝'] },
+  { label: 'オブジェクト', emojis: ['🎉', '🎊', '🎁', '🏆', '🥇', '⭐', '🌟', '💡', '📌', '📎', '✏️', '📝', '📅', '🗓️', '🔔', '📣', '💬', '🚀', '⚡', '🎯'] },
+]
+
+const ToolbarButton = ({ icon, title, onClick }: { icon: React.ReactNode; title: string; onClick?: () => void }) => (
   <button
     title={title}
+    onClick={onClick}
     style={{
       width: 28, height: 28, borderRadius: 'var(--radius-sm)',
       background: 'none', border: 'none',
@@ -36,9 +45,41 @@ const ToolbarButton = ({ icon, title }: { icon: React.ReactNode; title: string }
   </button>
 )
 
+function EmojiPicker({ onSelect }: { onSelect: (emoji: string) => void }) {
+  return (
+    <div style={{ width: 280, maxHeight: 320, overflowY: 'auto' }}>
+      {EMOJI_CATEGORIES.map((cat) => (
+        <div key={cat.label}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)', padding: '8px 4px 4px', textTransform: 'uppercase' }}>
+            {cat.label}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+            {cat.emojis.map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => onSelect(emoji)}
+                style={{
+                  width: 32, height: 32, fontSize: 18,
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#f0f0f0' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'none' }}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function MessageComposer({ placeholder = 'メッセージを入力...', onSend, disabled }: MessageComposerProps) {
   const [value, setValue] = useState('')
   const [sending, setSending] = useState(false)
+  const [emojiOpen, setEmojiOpen] = useState(false)
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null)
 
   async function handleSend() {
@@ -54,6 +95,27 @@ export function MessageComposer({ placeholder = 'メッセージを入力...', o
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
   }
 
+  function insertEmoji(emoji: string) {
+    setValue((prev) => prev + emoji)
+    setEmojiOpen(false)
+    setTimeout(() => textAreaRef.current?.focus(), 0)
+  }
+
+  function applyFormat(prefix: string, suffix: string) {
+    const ta = textAreaRef.current
+    if (!ta) return
+    const start = ta.selectionStart
+    const end = ta.selectionEnd
+    const selected = value.substring(start, end)
+    const newValue = value.substring(0, start) + prefix + selected + suffix + value.substring(end)
+    setValue(newValue)
+    setTimeout(() => {
+      ta.focus()
+      ta.selectionStart = start + prefix.length
+      ta.selectionEnd = end + prefix.length
+    }, 0)
+  }
+
   const hasText = value.trim().length > 0
 
   return (
@@ -61,16 +123,16 @@ export function MessageComposer({ placeholder = 'メッセージを入力...', o
       <div style={{ border: '1px solid #bbb', borderRadius: 'var(--radius-lg)', background: '#fff', overflow: 'hidden' }}>
         {/* Rich text toolbar */}
         <div style={{ display: 'flex', alignItems: 'center', padding: '4px 8px', borderBottom: '1px solid var(--color-border-light)', gap: 0 }}>
-          <ToolbarButton icon={<BoldOutlined />} title="太字" />
-          <ToolbarButton icon={<ItalicOutlined />} title="斜体" />
-          <ToolbarButton icon={<UnderlineOutlined />} title="下線" />
-          <ToolbarButton icon={<StrikethroughOutlined />} title="取り消し線" />
+          <ToolbarButton icon={<BoldOutlined />} title="太字" onClick={() => applyFormat('**', '**')} />
+          <ToolbarButton icon={<ItalicOutlined />} title="斜体" onClick={() => applyFormat('_', '_')} />
+          <ToolbarButton icon={<UnderlineOutlined />} title="下線" onClick={() => applyFormat('<u>', '</u>')} />
+          <ToolbarButton icon={<StrikethroughOutlined />} title="取り消し線" onClick={() => applyFormat('~~', '~~')} />
           <div style={{ width: 1, height: 18, background: 'var(--color-border)', margin: '0 4px' }} />
-          <ToolbarButton icon={<LinkOutlined />} title="リンク" />
-          <ToolbarButton icon={<OrderedListOutlined />} title="番号付きリスト" />
-          <ToolbarButton icon={<UnorderedListOutlined />} title="箇条書きリスト" />
+          <ToolbarButton icon={<LinkOutlined />} title="リンク" onClick={() => applyFormat('[', '](url)')} />
+          <ToolbarButton icon={<OrderedListOutlined />} title="番号付きリスト" onClick={() => applyFormat('1. ', '')} />
+          <ToolbarButton icon={<UnorderedListOutlined />} title="箇条書きリスト" onClick={() => applyFormat('- ', '')} />
           <div style={{ width: 1, height: 18, background: 'var(--color-border)', margin: '0 4px' }} />
-          <ToolbarButton icon={<CodeOutlined />} title="コード" />
+          <ToolbarButton icon={<CodeOutlined />} title="コード" onClick={() => applyFormat('`', '`')} />
         </div>
 
         {/* Text input */}
@@ -95,7 +157,17 @@ export function MessageComposer({ placeholder = 'メッセージを入力...', o
           <div style={{ display: 'flex', gap: 0 }}>
             <ToolbarButton icon={<PlusOutlined />} title="添付" />
             <ToolbarButton icon={<FontSizeOutlined />} title="書式" />
-            <ToolbarButton icon={<SmileOutlined />} title="絵文字" />
+            <Popover
+              content={<EmojiPicker onSelect={insertEmoji} />}
+              trigger="click"
+              open={emojiOpen}
+              onOpenChange={setEmojiOpen}
+              placement="topLeft"
+            >
+              <div>
+                <ToolbarButton icon={<SmileOutlined />} title="絵文字" onClick={() => setEmojiOpen(!emojiOpen)} />
+              </div>
+            </Popover>
             <ToolbarButton icon={<span style={{ fontSize: 15, fontWeight: 700 }}>@</span>} title="メンション" />
             <ToolbarButton icon={<VideoCameraOutlined />} title="ビデオクリップ" />
             <ToolbarButton icon={<AudioOutlined />} title="音声" />

@@ -68,6 +68,27 @@ export function DmListItem({ conversation, isActive, onClick }: DmListItemProps)
       >
         {displayName}
       </span>
+      {(conversation.unread_count ?? 0) > 0 && (
+        <span
+          style={{
+            marginLeft: 'auto',
+            background: 'var(--color-mention-badge)',
+            color: '#fff',
+            fontSize: 12,
+            fontWeight: 700,
+            borderRadius: 10,
+            padding: '0 6px',
+            minWidth: 18,
+            height: 18,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          {conversation.unread_count}
+        </span>
+      )}
     </button>
   )
 }

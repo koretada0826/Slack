@@ -1,6 +1,8 @@
-import { StarOutlined, TeamOutlined, SearchOutlined, BellOutlined, MoreOutlined } from '@ant-design/icons'
+import { useState } from 'react'
+import { StarOutlined, TeamOutlined, SearchOutlined, BellOutlined, SettingOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { useWorkspaceStore } from '@/store/workspaceStore'
+import { ChannelSettingsDrawer } from './ChannelSettingsDrawer'
 import type { DbChannel } from '@/types/db'
 
 interface ChannelHeaderProps {
@@ -10,6 +12,7 @@ interface ChannelHeaderProps {
 export function ChannelHeader({ channel }: ChannelHeaderProps) {
   const navigate = useNavigate()
   const { currentWorkspace } = useWorkspaceStore()
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   return (
     <div style={{ flexShrink: 0 }}>
@@ -58,6 +61,11 @@ export function ChannelHeader({ channel }: ChannelHeaderProps) {
           <span style={{ fontWeight: 900, fontSize: 18, color: 'var(--color-text)' }}>
             # {channel.name}
           </span>
+          {channel.topic && (
+            <span style={{ fontSize: 13, color: 'var(--color-text-muted)', marginLeft: 8 }}>
+              {channel.topic}
+            </span>
+          )}
         </div>
 
         {/* Right */}
@@ -73,9 +81,14 @@ export function ChannelHeader({ channel }: ChannelHeaderProps) {
           >
             <TeamOutlined /> チームのメンバーを招待する
           </button>
-          {[BellOutlined, SearchOutlined, MoreOutlined].map((Icon, i) => (
+          {[
+            { Icon: BellOutlined, onClick: () => navigate(`/ws/${currentWorkspace?.slug}/notifications`) },
+            { Icon: SearchOutlined, onClick: () => navigate(`/ws/${currentWorkspace?.slug}/search`) },
+            { Icon: SettingOutlined, onClick: () => setSettingsOpen(true) },
+          ].map(({ Icon, onClick }, i) => (
             <button
               key={i}
+              onClick={onClick}
               style={{
                 width: 28, height: 28, borderRadius: 'var(--radius-sm)',
                 background: 'none', border: 'none',
@@ -106,7 +119,7 @@ export function ChannelHeader({ channel }: ChannelHeaderProps) {
             display: 'flex', alignItems: 'center', gap: 4,
           }}
         >
-          💬 メッセージ
+          メッセージ
         </button>
         <button
           style={{
@@ -117,18 +130,16 @@ export function ChannelHeader({ channel }: ChannelHeaderProps) {
             display: 'flex', alignItems: 'center', gap: 4,
           }}
         >
-          📝 canvas を追加する
-        </button>
-        <button
-          style={{
-            background: 'none', border: 'none',
-            color: 'var(--color-text-muted)', cursor: 'pointer',
-            fontSize: 16, padding: '8px 4px', height: '100%',
-          }}
-        >
-          +
+          canvas
         </button>
       </div>
+
+      <ChannelSettingsDrawer
+        channel={channel}
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onUpdated={() => setSettingsOpen(false)}
+      />
     </div>
   )
 }
