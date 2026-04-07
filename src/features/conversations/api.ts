@@ -46,54 +46,16 @@ export async function fetchConversations(
     membersByConv.set(row.conversation_id, existing)
   }
 
-  // Fetch read states for conversations
-  const { data: readStates } = await supabase
-    .from('read_states')
-    .select('conversation_id, last_read_message_id')
-    .eq('user_id', userId)
-    .eq('workspace_id', workspaceId)
-    .not('conversation_id', 'is', null)
+  // Fetch unread counts via RPC (single query)
+  const { data: unreadData } = await supabase.rpc('get_unread_counts', {
+    _user_id: userId,
+    _workspace_id: workspaceId,
+  })
 
-  const readStateMap = new Map<string, string>()
-  for (const rs of readStates ?? []) {
-    if (rs.conversation_id && rs.last_read_message_id) {
-      readStateMap.set(rs.conversation_id, rs.last_read_message_id)
-    }
-  }
-
-  // Get last read message timestamps
-  const lastReadMsgIds = Array.from(readStateMap.values())
-  let lastReadTimestamps = new Map<string, string>()
-  if (lastReadMsgIds.length > 0) {
-    const { data: msgs } = await supabase
-      .from('messages')
-      .select('id, created_at')
-      .in('id', lastReadMsgIds)
-    for (const msg of msgs ?? []) {
-      lastReadTimestamps.set(msg.id, msg.created_at)
-    }
-  }
-
-  // Compute unread counts
   const unreadMap = new Map<string, number>()
-  for (const conv of conversations) {
-    const lastReadMsgId = readStateMap.get(conv.id)
-    const lastReadAt = lastReadMsgId ? lastReadTimestamps.get(lastReadMsgId) : null
-
-    let query = supabase
-      .from('messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('conversation_id', conv.id)
-      .is('parent_message_id', null)
-      .is('deleted_at', null)
-
-    if (lastReadAt) {
-      query = query.gt('created_at', lastReadAt)
-    }
-
-    const { count } = await query
-    if (count && count > 0) {
-      unreadMap.set(conv.id, count)
+  for (const row of unreadData ?? []) {
+    if (row.target_type === 'conversation') {
+      unreadMap.set(row.target_id, Number(row.unread_count))
     }
   }
 
