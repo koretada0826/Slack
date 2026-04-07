@@ -8,6 +8,7 @@ import { formatMessageTime } from '@/features/messages/utils'
 import { MessageActions } from './MessageActions'
 import { MessageEditor } from './MessageEditor'
 import { ReactionBar } from './ReactionBar'
+import { UserProfileCard } from '@/components/common/UserProfileCard'
 import type { MessageWithSender } from '@/types/entities'
 
 interface MessageItemProps {
@@ -33,6 +34,7 @@ export function MessageItem({ message, showHeader, onThreadOpen }: MessageItemPr
   const [hovered, setHovered] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editLoading, setEditLoading] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const isOwn = message.sender_id === user?.id
 
   if (message.deleted_at) {
@@ -81,6 +83,7 @@ export function MessageItem({ message, showHeader, onThreadOpen }: MessageItemPr
         <div style={{ width: 36, flexShrink: 0 }}>
           {showHeader && (
             <div
+              onClick={() => setProfileOpen(true)}
               style={{
                 width: 36,
                 height: 36,
@@ -104,7 +107,7 @@ export function MessageItem({ message, showHeader, onThreadOpen }: MessageItemPr
         <div style={{ flex: 1, minWidth: 0 }}>
           {showHeader && (
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2 }}>
-              <span style={{ fontWeight: 900, fontSize: 'var(--font-size-base)', color: 'var(--color-text)', cursor: 'pointer' }}>
+              <span onClick={() => setProfileOpen(true)} style={{ fontWeight: 900, fontSize: 'var(--font-size-base)', color: 'var(--color-text)', cursor: 'pointer' }}>
                 {message.sender.display_name}
               </span>
               <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
@@ -144,6 +147,8 @@ export function MessageItem({ message, showHeader, onThreadOpen }: MessageItemPr
           )}
         </div>
       </div>
+
+      <UserProfileCard user={message.sender} open={profileOpen} onClose={() => setProfileOpen(false)} />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useWorkspaceStore } from '@/store/workspaceStore'
+import { UserProfileCard } from '@/components/common/UserProfileCard'
 import type { DbProfile } from '@/types/db'
 
 interface MemberRow {
@@ -12,6 +13,7 @@ interface MemberRow {
 export function WorkspaceMemberList() {
   const [members, setMembers] = useState<MemberRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedUser, setSelectedUser] = useState<DbProfile | null>(null)
   const { currentWorkspace } = useWorkspaceStore()
 
   useEffect(() => {
@@ -70,9 +72,10 @@ export function WorkspaceMemberList() {
         return (
           <div
             key={m.user_id}
+            onClick={() => m.profiles && setSelectedUser(m.profiles)}
             style={{
               display: 'flex', alignItems: 'center', gap: 10,
-              padding: '6px 8px', borderRadius: 6,
+              padding: '6px 8px', borderRadius: 6, cursor: 'pointer',
             }}
           >
             <div
@@ -101,6 +104,7 @@ export function WorkspaceMemberList() {
           </div>
         )
       })}
+      <UserProfileCard user={selectedUser} open={!!selectedUser} onClose={() => setSelectedUser(null)} />
     </div>
   )
 }
