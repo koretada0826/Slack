@@ -1,14 +1,11 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   EditOutlined,
   CaretDownOutlined,
   SettingOutlined,
-  AudioOutlined,
-  ContactsOutlined,
   StarOutlined,
   PlusOutlined,
-  AppstoreOutlined,
-  RobotOutlined,
 } from '@ant-design/icons'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import { useChannels } from '@/features/channels/hooks'
@@ -19,37 +16,13 @@ import { DmList } from '@/components/dm/DmList'
 import { StartDmModal } from '@/components/dm/StartDmModal'
 
 export function Sidebar() {
+  const navigate = useNavigate()
   const { currentWorkspace } = useWorkspaceStore()
   const { channels, refresh: refreshChannels } = useChannels()
   const { conversations, refresh: refreshConversations } = useConversations()
   const [channelModalOpen, setChannelModalOpen] = useState(false)
   const [dmModalOpen, setDmModalOpen] = useState(false)
   const [starCollapsed, setStarCollapsed] = useState(false)
-
-  const sidebarItem = (icon: React.ReactNode, label: string, onClick?: () => void) => (
-    <button
-      onClick={onClick}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        width: '100%',
-        padding: '3px 20px 3px 20px',
-        background: 'none',
-        border: 'none',
-        color: 'var(--color-sidebar-text)',
-        cursor: 'pointer',
-        fontSize: 'var(--font-size-base)',
-        textAlign: 'left',
-        height: 28,
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-sidebar-hover)')}
-      onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
-    >
-      <span style={{ width: 18, display: 'flex', justifyContent: 'center', fontSize: 15, opacity: 0.8 }}>{icon}</span>
-      {label}
-    </button>
-  )
 
   return (
     <div
@@ -87,12 +60,14 @@ export function Sidebar() {
         </button>
         <div style={{ display: 'flex', gap: 4 }}>
           <button
+            onClick={() => navigate('/settings')}
             style={{
               width: 28, height: 28, borderRadius: 'var(--radius-sm)',
               background: 'none', border: 'none',
               color: 'var(--color-sidebar-text)', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14,
             }}
+            title="ワークスペース設定"
           >
             <SettingOutlined />
           </button>
@@ -112,13 +87,6 @@ export function Sidebar() {
 
       {/* Scrollable content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '6px 0' }}>
-        {/* Top nav items */}
-        {sidebarItem(<AudioOutlined />, 'ハドルミーティング')}
-        {sidebarItem(<ContactsOutlined />, 'ディレクトリ')}
-
-        {/* Divider */}
-        <div style={{ height: 1, background: 'var(--color-sidebar-border)', margin: '8px 16px' }} />
-
         {/* Starred section */}
         <div style={{ padding: '0 8px 0 4px', height: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <button
@@ -173,7 +141,7 @@ export function Sidebar() {
         {/* DM */}
         <DmList conversations={conversations} onStartDmClick={() => setDmModalOpen(true)} />
 
-        {/* Invite members */}
+        {/* Start new DM */}
         <button
           onClick={() => setDmModalOpen(true)}
           style={{
@@ -189,15 +157,8 @@ export function Sidebar() {
           onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
         >
           <PlusOutlined style={{ fontSize: 12 }} />
-          メンバーを招待
+          DMを追加する
         </button>
-
-        {/* Divider */}
-        <div style={{ height: 1, background: 'var(--color-sidebar-border)', margin: '8px 16px' }} />
-
-        {/* App section */}
-        {sidebarItem(<AppstoreOutlined />, 'App')}
-        {sidebarItem(<RobotOutlined />, 'TeamBot')}
       </div>
 
       {/* Modals */}

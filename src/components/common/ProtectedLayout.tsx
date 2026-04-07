@@ -2,7 +2,12 @@ import { Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 
 export function ProtectedLayout() {
-  const { session, profile } = useAuthStore()
+  const { session, profile, initialized } = useAuthStore()
+
+  // 初期化中 → ローディング表示
+  if (!initialized) {
+    return null
+  }
 
   // セッションなし → ログインへ
   if (!session) {

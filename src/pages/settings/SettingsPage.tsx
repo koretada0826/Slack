@@ -31,6 +31,7 @@ export default function SettingsPage() {
 
   async function handleLogout() {
     await logout()
+    useAuthStore.getState().reset()
     navigate('/login', { replace: true })
   }
 

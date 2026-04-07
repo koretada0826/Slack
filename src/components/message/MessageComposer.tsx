@@ -1,14 +1,12 @@
 import { useState, useRef } from 'react'
 import { Input, Popover } from 'antd'
 import {
-  PlusOutlined, SendOutlined, CaretDownOutlined,
+  SendOutlined, CaretDownOutlined,
   BoldOutlined, ItalicOutlined, UnderlineOutlined, StrikethroughOutlined,
   LinkOutlined, OrderedListOutlined, UnorderedListOutlined,
   CodeOutlined,
   SmileOutlined,
   FontSizeOutlined,
-  VideoCameraOutlined,
-  AudioOutlined,
 } from '@ant-design/icons'
 
 const { TextArea } = Input
@@ -101,6 +99,11 @@ export function MessageComposer({ placeholder = 'メッセージを入力...', o
     setTimeout(() => textAreaRef.current?.focus(), 0)
   }
 
+  function insertAtMention() {
+    setValue((prev) => prev + '@')
+    setTimeout(() => textAreaRef.current?.focus(), 0)
+  }
+
   function applyFormat(prefix: string, suffix: string) {
     const ta = textAreaRef.current
     if (!ta) return
@@ -155,7 +158,6 @@ export function MessageComposer({ placeholder = 'メッセージを入力...', o
         {/* Bottom toolbar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', borderTop: '1px solid var(--color-border-light)' }}>
           <div style={{ display: 'flex', gap: 0 }}>
-            <ToolbarButton icon={<PlusOutlined />} title="添付" />
             <ToolbarButton icon={<FontSizeOutlined />} title="書式" />
             <Popover
               content={<EmojiPicker onSelect={insertEmoji} />}
@@ -168,9 +170,7 @@ export function MessageComposer({ placeholder = 'メッセージを入力...', o
                 <ToolbarButton icon={<SmileOutlined />} title="絵文字" onClick={() => setEmojiOpen(!emojiOpen)} />
               </div>
             </Popover>
-            <ToolbarButton icon={<span style={{ fontSize: 15, fontWeight: 700 }}>@</span>} title="メンション" />
-            <ToolbarButton icon={<VideoCameraOutlined />} title="ビデオクリップ" />
-            <ToolbarButton icon={<AudioOutlined />} title="音声" />
+            <ToolbarButton icon={<span style={{ fontSize: 15, fontWeight: 700 }}>@</span>} title="メンション" onClick={() => insertAtMention()} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <button

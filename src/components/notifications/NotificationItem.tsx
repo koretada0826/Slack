@@ -1,9 +1,11 @@
+import { useNavigate, useParams } from 'react-router-dom'
 import { Typography } from 'antd'
 import {
   MessageOutlined,
   BellOutlined,
   SmileOutlined,
 } from '@ant-design/icons'
+import { useUiStore } from '@/store/uiStore'
 import type { DbNotification } from '@/types/db'
 
 const { Text } = Typography
@@ -24,11 +26,35 @@ interface NotificationItemProps {
 }
 
 export function NotificationItem({ notification, onRead }: NotificationItemProps) {
+  const { workspaceSlug } = useParams<{ workspaceSlug: string }>()
+  const navigate = useNavigate()
+  const { setActiveChatTarget } = useUiStore()
   const timeAgo = formatTimeAgo(notification.created_at)
+
+  function handleClick() {
+    if (!notification.is_read) {
+      onRead(notification.id)
+    }
+
+    const { entity_type, entity_id } = notification
+    if (entity_type === 'channel') {
+      setActiveChatTarget({ type: 'channel', id: entity_id })
+      navigate(`/ws/${workspaceSlug}`)
+    } else if (entity_type === 'conversation') {
+      setActiveChatTarget({ type: 'conversation', id: entity_id })
+      navigate(`/ws/${workspaceSlug}`)
+    } else if (entity_type === 'message') {
+      // For message entities, the notification type tells us the context
+      // dm_message -> conversation, mention/thread_reply/reaction -> could be channel or conversation
+      // We navigate to workspace and let it resolve; entity_id is the message id but
+      // we don't have the channel/conversation id directly, so we just go back to workspace
+      navigate(`/ws/${workspaceSlug}`)
+    }
+  }
 
   return (
     <button
-      onClick={() => !notification.is_read && onRead(notification.id)}
+      onClick={handleClick}
       style={{
         display: 'flex',
         alignItems: 'flex-start',
@@ -40,7 +66,7 @@ export function NotificationItem({ notification, onRead }: NotificationItemProps
         background: notification.is_read
           ? 'transparent'
           : 'var(--color-primary-bg)',
-        cursor: notification.is_read ? 'default' : 'pointer',
+        cursor: 'pointer',
         textAlign: 'left',
       }}
     >

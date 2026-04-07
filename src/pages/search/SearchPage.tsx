@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Typography, Button, Tabs, List } from 'antd'
+import { Typography, Button, Tabs, List, message } from 'antd'
 import { ArrowLeftOutlined, NumberOutlined, UserOutlined, FileTextOutlined } from '@ant-design/icons'
 import { useSearch } from '@/features/search/hooks'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -9,6 +9,10 @@ import { AppAvatar } from '@/components/common/AppAvatar'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingState } from '@/components/common/LoadingState'
 import { formatMessageTime } from '@/features/messages/utils'
+import { useUiStore } from '@/store/uiStore'
+import { useAuthStore } from '@/store/authStore'
+import { useWorkspaceStore } from '@/store/workspaceStore'
+import { findExistingDm, createConversation } from '@/features/conversations/api'
 
 const { Text } = Typography
 
@@ -18,6 +22,43 @@ export default function SearchPage() {
   const [input, setInput] = useState('')
   const debouncedInput = useDebounce(input, 300)
   const { results, loading, search } = useSearch()
+  const { setActiveChatTarget } = useUiStore()
+  const { user } = useAuthStore()
+  const { currentWorkspace } = useWorkspaceStore()
+
+  function handleChannelClick(channelId: string) {
+    setActiveChatTarget({ type: 'channel', id: channelId })
+    navigate(`/ws/${workspaceSlug}`)
+  }
+
+  async function handleUserClick(userId: string) {
+    if (!user || !currentWorkspace) return
+    try {
+      const existing = await findExistingDm(currentWorkspace.id, user.id, userId)
+      if (existing) {
+        setActiveChatTarget({ type: 'conversation', id: existing.id })
+      } else {
+        const conv = await createConversation(user.id, {
+          workspace_id: currentWorkspace.id,
+          kind: 'dm',
+          member_ids: [userId],
+        })
+        setActiveChatTarget({ type: 'conversation', id: conv.id })
+      }
+      navigate(`/ws/${workspaceSlug}`)
+    } catch {
+      message.error('会話の開始に失敗しました')
+    }
+  }
+
+  function handleMessageClick(msg: { channel_id: string | null; conversation_id: string | null }) {
+    if (msg.channel_id) {
+      setActiveChatTarget({ type: 'channel', id: msg.channel_id })
+    } else if (msg.conversation_id) {
+      setActiveChatTarget({ type: 'conversation', id: msg.conversation_id })
+    }
+    navigate(`/ws/${workspaceSlug}`)
+  }
 
   useEffect(() => {
     search(debouncedInput)
@@ -93,7 +134,7 @@ export default function SearchPage() {
                         size="small"
                         dataSource={results.users}
                         renderItem={(u) => (
-                          <List.Item style={{ padding: '8px 0' }}>
+                          <List.Item style={{ padding: '8px 0', cursor: 'pointer' }} onClick={() => handleUserClick(u.id)}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                               <AppAvatar
                                 name={u.display_name}
@@ -129,7 +170,7 @@ export default function SearchPage() {
                         size="small"
                         dataSource={results.channels}
                         renderItem={(ch) => (
-                          <List.Item style={{ padding: '8px 0' }}>
+                          <List.Item style={{ padding: '8px 0', cursor: 'pointer' }} onClick={() => handleChannelClick(ch.id)}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                               <NumberOutlined style={{ color: 'var(--color-text-secondary)' }} />
                               <Text>{ch.name}</Text>
@@ -163,7 +204,7 @@ export default function SearchPage() {
                         size="small"
                         dataSource={results.messages}
                         renderItem={(msg) => (
-                          <List.Item style={{ padding: '8px 0' }}>
+                          <List.Item style={{ padding: '8px 0', cursor: 'pointer' }} onClick={() => handleMessageClick(msg)}>
                             <div style={{ minWidth: 0, flex: 1 }}>
                               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                                 <Text strong style={{ fontSize: 13 }}>
@@ -201,7 +242,7 @@ export default function SearchPage() {
                 <List
                   dataSource={results.users}
                   renderItem={(u) => (
-                    <List.Item>
+                    <List.Item style={{ cursor: 'pointer' }} onClick={() => handleUserClick(u.id)}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <AppAvatar
                           name={u.display_name}
@@ -232,7 +273,7 @@ export default function SearchPage() {
                 <List
                   dataSource={results.channels}
                   renderItem={(ch) => (
-                    <List.Item>
+                    <List.Item style={{ cursor: 'pointer' }} onClick={() => handleChannelClick(ch.id)}>
                       <div>
                         <Text strong># {ch.name}</Text>
                         {ch.description && (
@@ -258,7 +299,7 @@ export default function SearchPage() {
                 <List
                   dataSource={results.messages}
                   renderItem={(msg) => (
-                    <List.Item>
+                    <List.Item style={{ cursor: 'pointer' }} onClick={() => handleMessageClick(msg)}>
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           <Text strong>{msg.sender_display_name}</Text>

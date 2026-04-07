@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { useWorkspaceStore } from '@/store/workspaceStore'
+import { supabase } from '@/lib/supabase/client'
 import { fetchChannels } from './api'
 import type { ChannelWithMeta } from '@/types/entities'
 
@@ -28,6 +29,31 @@ export function useChannels() {
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  // Realtime subscription for channel list updates
+  useEffect(() => {
+    if (!currentWorkspace) return
+
+    const channel = supabase
+      .channel(`channels:workspace=${currentWorkspace.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'channels',
+          filter: `workspace_id=eq.${currentWorkspace.id}`,
+        },
+        () => {
+          refresh()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [currentWorkspace, refresh])
 
   return { channels, loading, error, refresh, setChannels }
 }

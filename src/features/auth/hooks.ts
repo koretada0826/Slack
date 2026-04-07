@@ -12,18 +12,19 @@ export function useAuthInit() {
 
     const store = useAuthStore.getState()
 
-    // 即座にinitializedをtrueにする → ローディング画面を出さない
-    // セッションがあれば後から更新される
-    store.setInitialized(true)
-
     supabase.auth.getSession().then(({ data: { session } }) => {
       store.setSession(session)
       if (session?.user) {
         fetchProfile(session.user.id)
           .then((p) => store.setProfile(p))
           .catch(() => {})
+          .finally(() => store.setInitialized(true))
+      } else {
+        store.setInitialized(true)
       }
-    }).catch(() => {})
+    }).catch(() => {
+      store.setInitialized(true)
+    })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const s = useAuthStore.getState()

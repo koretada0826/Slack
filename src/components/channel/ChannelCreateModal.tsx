@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Modal, Form, Input, Radio, message } from 'antd'
 import { useAuthStore } from '@/store/authStore'
 import { useWorkspaceStore } from '@/store/workspaceStore'
-import { createChannel } from '@/features/channels/api'
+import { useUiStore } from '@/store/uiStore'
+import { createChannel, joinChannel } from '@/features/channels/api'
 import type { ChannelVisibility } from '@/types/db'
 
 interface ChannelCreateModalProps {
@@ -27,6 +28,7 @@ export function ChannelCreateModal({
   const [loading, setLoading] = useState(false)
   const { user } = useAuthStore()
   const { currentWorkspace } = useWorkspaceStore()
+  const { setActiveChatTarget, setMobileDrawerOpen } = useUiStore()
 
   async function handleFinish(values: {
     name: string
@@ -36,17 +38,24 @@ export function ChannelCreateModal({
     if (!user || !currentWorkspace) return
     setLoading(true)
     try {
-      await createChannel(user.id, {
+      const channel = await createChannel(user.id, {
         workspace_id: currentWorkspace.id,
         name: values.name.trim(),
         slug: slugify(values.name),
         description: values.description?.trim(),
         visibility: values.visibility,
       })
+      // Auto-join the newly created channel
+      await joinChannel(channel.id, user.id).catch(() => {
+        // May already be a member (e.g. if the DB trigger auto-adds creator)
+      })
       message.success('チャンネルを作成しました')
       form.resetFields()
       onCreated()
       onClose()
+      // Navigate to the new channel
+      setActiveChatTarget({ type: 'channel', id: channel.id })
+      setMobileDrawerOpen(false)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'チャンネルの作成に失敗しました'
       if (msg.includes('duplicate') || msg.includes('unique')) {

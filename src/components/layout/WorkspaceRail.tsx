@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import { useNotificationStore } from '@/store/notificationStore'
+import { useUiStore } from '@/store/uiStore'
 import { Badge } from 'antd'
 import type { WorkspaceWithRole } from '@/types/entities'
 
@@ -16,6 +17,7 @@ export function WorkspaceRail() {
   const navigate = useNavigate()
   const { workspaces, currentWorkspace, setCurrentWorkspace } = useWorkspaceStore()
   const { unreadCount } = useNotificationStore()
+  const { setActiveChatTarget } = useUiStore()
   const slug = currentWorkspace?.slug ?? ''
 
   function handleSelect(ws: WorkspaceWithRole) {
@@ -24,7 +26,14 @@ export function WorkspaceRail() {
   }
 
   const navItems = [
-    { icon: <HomeOutlined />, label: 'ホーム', onClick: () => {} },
+    {
+      icon: <HomeOutlined />,
+      label: 'ホーム',
+      onClick: () => {
+        setActiveChatTarget(null)
+        navigate(`/ws/${slug}`)
+      },
+    },
     {
       icon: (
         <Badge count={unreadCount} size="small" offset={[2, -2]}>
@@ -32,7 +41,11 @@ export function WorkspaceRail() {
         </Badge>
       ),
       label: 'DM',
-      onClick: () => {},
+      onClick: () => {
+        // Navigate to workspace root and clear chat target so sidebar DM list is visible
+        setActiveChatTarget(null)
+        navigate(`/ws/${slug}`)
+      },
     },
     { icon: <BellOutlined />, label: 'アクティビティ', onClick: () => navigate(`/ws/${slug}/notifications`) },
   ]

@@ -49,14 +49,16 @@ export function DmListItem({ conversation, isActive, onClick }: DmListItemProps)
         if (!isActive) e.currentTarget.style.background = 'transparent'
       }}
     >
-      {/* Presence dot */}
+      {/* Neutral chat indicator */}
       <span
         style={{
           width: 9,
           height: 9,
           borderRadius: '50%',
-          background: 'var(--color-online)',
+          border: '1.5px solid currentColor',
+          background: 'transparent',
           flexShrink: 0,
+          opacity: 0.6,
         }}
       />
       <span
