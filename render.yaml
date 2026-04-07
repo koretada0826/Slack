@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: slack
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_SUPABASE_URL
+        value: https://xjtlecegpmksmwxyfffa.supabase.co
+      - key: VITE_SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqdGxlY2VncG1rc213eHlmZmZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0NjA3MTMsImV4cCI6MjA5MTAzNjcxM30.-eHFw0zQg-zvEZ8Ix60TDFfrb1dMJtVXCziO98IJLf4
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
